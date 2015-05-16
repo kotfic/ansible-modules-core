@@ -36,12 +36,12 @@ options:
     aliases: []
   src:
     description:
-      - device to be mounted on I(name).
-    required: true
+      - "device to be mounted on I(name). Required for C(state=present) or C(state=mounted)."
+    required: false
     default: null
   fstype:
     description:
-      - file-system type
+      - "file-system type. Required for C(state=present) or C(state=mounted)."
     required: true
     default: null
   opts:
@@ -278,20 +278,21 @@ def main():
             opts   = dict(default=None),
             passno = dict(default=None),
             dump   = dict(default=None),
-            src    = dict(required=True),
-            fstype = dict(required=True),
+            src    = dict(required=False),
+            fstype = dict(required=False),
             fstab  = dict(default='/etc/fstab')
         )
     )
 
-
     changed = False
     rc = 0
     args = {
-        'name': module.params['name'],
-        'src': module.params['src'],
-        'fstype': module.params['fstype']
+        'name': module.params['name']
     }
+    if module.params['src'] is not None:
+        args['src'] = module.params['src']
+    if module.params['fstype'] is not None:
+        args['fstype'] = module.params['fstype']
     if module.params['passno'] is not None:
         args['passno'] = module.params['passno']
     if module.params['opts'] is not None:
@@ -341,6 +342,9 @@ def main():
         module.exit_json(changed=changed, **args)
 
     if state in ['mounted', 'present']:
+        if not all(k in args for k in ['src', 'fstype']):
+            module.fail_json(msg="src and fstype required for 'mounted' or 'present' state")
+
         if state == 'mounted':
             if not os.path.exists(name):
                 try:
