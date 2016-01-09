@@ -36,13 +36,13 @@ options:
     aliases: []
   src:
     description:
-      - device to be mounted on I(name).
-    required: true
+        - device to be mounted on I(name). Required when C(state=present) or C(state=mounted)
+    required: false
     default: null
   fstype:
     description:
-      - file-system type
-    required: true
+      - file-system type. Required when C(state=present) or C(state=mounted)
+    required: false
     default: null
   opts:
     description:
@@ -62,7 +62,7 @@ options:
   state:
     description:
       - If C(mounted) or C(unmounted), the device will be actively mounted or unmounted
-        as needed and appropriately configured in I(fstab). 
+        as needed and appropriately configured in I(fstab).
         C(absent) and C(present) only deal with
         I(fstab) but will not affect current mounting. If specifying C(mounted) and the mount
         point is not present, the mount point will be created. Similarly, specifying C(absent)        will remove the mount point directory.
@@ -79,7 +79,7 @@ options:
 
 notes: []
 requirements: []
-author: 
+author:
     - Ansible Core Team
     - Seth Vidal
 '''
@@ -239,9 +239,9 @@ def mount(module, **kwargs):
     mount_bin = module.get_bin_path('mount')
 
     name = kwargs['name']
-    
+
     cmd = [ mount_bin, ]
-    
+
     if os.path.ismount(name):
         cmd += [ '-o', 'remount', ]
 
@@ -278,21 +278,25 @@ def main():
             opts   = dict(default=None),
             passno = dict(default=None),
             dump   = dict(default=None),
-            src    = dict(required=True),
-            fstype = dict(required=True),
+            src    = dict(required=False),
+            fstype = dict(required=False),
             fstab  = dict(default='/etc/fstab')
         ),
-        supports_check_mode=True
+        supports_check_mode=True,
+        required_if = (
+            ['state', 'mounted', ['src', 'fstype']],
+            ['state', 'present', ['src', 'fstype']]
+        )
     )
 
 
     changed = False
     rc = 0
-    args = {
-        'name': module.params['name'],
-        'src': module.params['src'],
-        'fstype': module.params['fstype']
-    }
+    args = {'name': module.params['name']}
+    if module.params['src'] is not None:
+        args['src'] = module.params['src']
+    if module.params['fstype'] is not None:
+        args['fstype'] = module.params['fstype']
     if module.params['passno'] is not None:
         args['passno'] = module.params['passno']
     if module.params['opts'] is not None:
